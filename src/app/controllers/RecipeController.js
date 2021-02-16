@@ -7,7 +7,24 @@ module.exports = {
     async index(req, res) {
 
         try {
-            let recipesResults = await Recipe.all()
+            // let { filter, page, limit } = req.query
+
+            // page = page || 1
+            // limit = limit || 6
+            // let offset = limit *(page - 1)
+
+            // const params = { filter, page, limit, offset }
+
+            // const recipesResults = await Recipe.paginate(params)
+            // const recipes = recipesResults.rows
+            
+            // const pagination = {
+            //     total: Math.ceil(recipes[0].total/limit),
+            //     page
+            // }
+            
+            
+            const recipesResults = await Recipe.all()
             const recipes = recipesResults.rows
 
             if (!recipes) return res.send('Recipes not found!')
@@ -66,7 +83,7 @@ module.exports = {
                 created_at: date(Date.now()).iso
             })
             const recipe = recipeResults.rows[0]
-            console.log(recipeResults.rows);
+            console.log(recipe);
 
             // create files
             const filesResults = await Promise.all(req.files.map(file => File.create(file)))  //mapeando cada arquivo para operar o File.create
@@ -136,13 +153,13 @@ module.exports = {
     async put(req, res) {
 
         try {
-            const keys = Object.keys(req.body)
+            // const keys = Object.keys(req.body)
 
-            for (key of keys) {
-                if (req.body[key] == "" && key != "removed_files") {
-                    return res.send('Please fill all fields!')
-                }
-            }
+            // for (key of keys) {
+            //     if (req.body[key] == "" && key != "removed_files") {
+            //         return res.send('Please fill all fields!')
+            //     }
+            // }
 
             req.body.ingredients = req.body.ingredients.filter(ingredient => ingredient !== '')
             req.body.preparation = req.body.preparation.filter(preparation => preparation !== '')
@@ -174,7 +191,11 @@ module.exports = {
                 await Promise.all(removedFilesPromise)
             }
 
-            await Recipe.update(req.body)
+            const { title, chef, ingredients, preparation, information } = req.body
+
+            await Recipe.update(req.body.id, {
+                title, chef, ingredients, preparation, information
+            })
 
             return res.redirect(`/admin/recipes/${req.body.id}`)
 
@@ -185,23 +206,21 @@ module.exports = {
     async delete(req, res) {
 
         try {
+            // get recipe's id by recipe_id in RecipeFile
             const recipeFiles = await RecipeFile.findRecipeId(req.body.id)
             // console.log(recipeFiles.rows);
+
+            // delete row in RecipeFile
             await Promise.all(recipeFiles.rows.map(recipeFile => {
                 // console.log(recipeFile)
                  RecipeFile.delete(recipeFile.id)
             }))
+
+            // delete recipe by recipe_id and files by file_id from RecipeFile reference
             await Promise.all(recipeFiles.rows.map(async recipeFile => {
                 await Recipe.delete(recipeFile.recipe_id)
                 await File.delete(recipeFile.file_id)
-            }))
-
-            //await RecipeFile.delete(req.body.id)
-            
-            //await Recipe.delete(req.body.id)
-            
-           //await File.delete(req.body.id)
-            
+            }))  
 
             return res.redirect(`/admin/recipes`)
 

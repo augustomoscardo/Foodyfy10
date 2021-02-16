@@ -68,22 +68,26 @@ module.exports = {
 
         return db.query(query, values)
     },
-    delete(id) {
+    async delete(id) {
         try {
             // // get image of chef
-            // let results = await db.query(`
-            //     SELECT files.* FROM files
-            //     LEFT JOIN chefs OM (files.id = chefs.file_id)
-            //     WHERE chefs.id = $1
-            // `)
-            // const files = results.rows
+            const results = await db.query(`
+                SELECT files.* FROM files
+                LEFT JOIN chefs ON (files.id = chefs.file_id)
+                WHERE chefs.id = $1`, [id])
 
-            // // remove image from 'public' directory
-            // const allFilesPromise = files.map(file => {
-            //     fs.unlinkSync(file.path)
-            // })
+            const files = results.rows
 
-            return db.query(`DELETE FROM chefs WHERE id = $1`, [id])
+            files.map(async file => {
+                fs.unlinkSync(file.path)
+                
+                await db.query(`DELETE FROM chefs WHERE id = $1`, [id])
+    
+                return db.query(`DELETE FROM files WHERE id = $1`, [file.id])
+            })
+
+
+
         } catch (error) {
             console.error(error);
         }
@@ -96,6 +100,8 @@ module.exports = {
             GROUP BY chefs.id`)
     },
     files(id) { // é o mesmo que o File.find()
-        return db.query(`SELECT * FROM files WHERE id = $1`, [id])
+        return db.query(`SELECT * FROM files 
+        LEFT JOIN chefs ON (chefs.file_id = files.id)
+        WHERE files.id = $1`, [id])
     }
 }

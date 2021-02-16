@@ -13,10 +13,6 @@ function userIsLogged( req, res, next) {
 }
 
 function userIsAdmin(req, res, next) {
-    // if (req.session.isAdmin == false) return res.render('admin/users', {
-    //     error: "Essa área é restrita para administradores!"
-    // })
-
     if (!req.session.isAdmin) return res.render('admin/users/index', {
         error: "Essa área é restrita para administradores!"
     })

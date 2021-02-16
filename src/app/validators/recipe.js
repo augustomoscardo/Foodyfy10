@@ -1,19 +1,6 @@
 const Recipe = require('../models/Recipe')
 
 
-function checkAllFields(body) {
-    const keys = Object.keys(body)
-
-    for (key of keys) {
-        if (body[key] == "") {
-            return {
-                user: body,
-                error: 'Por favor, preencha todos os campos'
-            }
-        }
-    }
-}
-
 async function post(req, res, next) {
     try {
         let results = await Recipe.chefsSelectOptions()
@@ -44,7 +31,31 @@ async function post(req, res, next) {
     }
 }
 
+async function update(req, res, next) {
+    try {
+        let results = await Recipe.chefsSelectOptions()
+        const chefOptions = results.rows
+
+        const keys = Object.keys(req.body)
+
+        for (key of keys) {
+            if (req.body[key] == "" && key != "removed_files") {
+                return res.render('admin/recipes/edit', {
+                    recipe: req.body,
+                    chefOptions,
+                    error: 'Por favor, preencha todos os campos'
+                })
+            }
+        }
+
+        next()
+    } catch (error) {
+        console.error();
+    }
+}
+
 
 module.exports = {
-    post
+    post,
+    update
 }

@@ -36,17 +36,6 @@ module.exports = {
     async post(req, res) {
 
         try {
-            const keys = Object.keys(req.body)
-
-            for (key of keys) {
-                if (req.body[key] == "") {
-                    return res.send('Please fill all fields!')
-                }
-            }
-            
-            if (req.files.length == 0) 
-                return res.send('Please send at least one image')
-
             // Criar a imagem primeiro, pois quando eu crio o chef é nele que eu pego a imagem.
             const filesPromise = req.files.map(file => File.create(file))
             
@@ -135,13 +124,13 @@ module.exports = {
     async put(req, res) {
 
         try {
-            const keys = Object.keys(req.body)
+            // const keys = Object.keys(req.body)
 
-            for (key of keys) {
-                if (req.body[key] == "" && key != "removed_files") {
-                    return res.send('Please fill all fields!')
-                }
-            }
+            // for (key of keys) {
+            //     if (req.body[key] == "" && key != "removed_files") {
+            //         return res.send('Please fill all fields!')
+            //     }
+            // }
 
             let newFiles;
 
@@ -150,7 +139,7 @@ module.exports = {
                 const newFilesPromise = req.files.map(file => File.create(file))
 
                newFiles = await Promise.all(newFilesPromise)
-               //console.log(newFiles)
+               console.log(newFiles)
             }
 
             // remove photo from db
@@ -184,16 +173,18 @@ module.exports = {
             return res.redirect(`/admin/chefs/${req.body.id}`)
 
         } catch (error) {
-            console.log(`ERROR: ${error}`)          
+            console.error(error);          
         }
     },
     async delete(req, res) {
 
         try {
-            let results = await Chef.find(req.body.id)
+            // finding chef
+            const chefResults = await Chef.find(req.body.id)
 
-            const chef = results.rows[0]
+            const chef = chefResults.rows[0]
 
+            // can't delete if chef has recipes registered
             if (chef.total_recipes >= 1) {
                 
                 return res.send('Chefs que possuem receitas não podem ser deletados')
@@ -201,13 +192,12 @@ module.exports = {
                 
                 await Chef.delete(req.body.id)
 
-                await File.delete(chef.file_id)
+                //await File.delete(chef.file_id) // não tem mais uso, o File.delete está resolvido na query do Chef.delete!!
 
                 return res.redirect(`/admin/chefs`)
             }
-
         } catch (error) {
-            console.log(error)   
+            console.error(error)   
         }
     },
 }

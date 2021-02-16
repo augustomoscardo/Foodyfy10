@@ -1,5 +1,5 @@
 const { date } = require('../../lib/utils')
-
+const fs = require('fs')
 const db = require('../../config/db')
 
 module.exports = {
@@ -77,21 +77,22 @@ module.exports = {
 
         return db.query(query, values,)
     },
-    delete(id) {
+    async delete(id) {
         try {
-            /*const results = await db.query(`
-                SELECT * FROM files
-                LEFT JOIN recipe_files ON (files.id = recipe_files.file_id)
-                WHERE recipe_files.recipe_id = $1
-            `, [id])
-            
-            const removedFiles = results.rows.map(async file => {
-                fs.unlinkSync(file.path)  
-                
-                await db.query(`DELETE FROM recipe_files WHERE recipe_files.file_id = $1`, [file.file_id])
+            // get recipe files
+            let results = await db.query(`SELECT * FROM files 
+                LEFT JOIN recipe_files ON (recipe_files.file_id = files.id) 
+                WHERE recipe_files.recipe_id = $1`, [id])
+
+            // remove files from 'public'
+            const filesToRemove = results.rows.map(async file => {
+                fs.unlinkSync(file.path)
+
+                await db.query('DELETE FROM recipe_files WHERE recipe_files.file_id = $1', [file.file_id])
+
                 await db.query(`DELETE FROM files WHERE id = $1`, [file.file_id])
-            })*/
-    
+            })
+
             return db.query(`DELETE FROM recipes WHERE id = $1`, [id])
             
         } catch (error) {
@@ -110,9 +111,9 @@ module.exports = {
         const { filter } = params
 
         let query = "",
-            filterquery = `WHERE`
+        filterQuery = `WHERE`
 
-        filterquery = `${filterquery}
+        filterQuery = `${filterQuery}
             recipes.title ILIKE '%${filter}%'
             OR chefs.name ILIKE '%${filter}%'
             ORDER BY updated_at DESC
@@ -122,9 +123,33 @@ module.exports = {
             SELECT recipes.*, chefs.name AS chef_name
             FROM recipes
             LEFT JOIN chefs ON (recipes.chef_id = chefs.id)
-            ${filterquery}
+            ${filterQuery}
         `
         
         return db.query(query)
+    },
+    paginate(params) {
+        const { filter, limit, offset } = params
+
+        let query = "",
+        filterQuery = "WHERE"
+
+        
+            filterQuery = `${filterQuery}
+                recipes.title ILIKE '%${filter}%'
+                OR chefs.name ILIKE '%${filter}%'
+                ORDER BY updated_at DESC
+            `
+        
+
+        query = `${query}
+            SELECT recipes.*, chefs.name AS chef_name
+            FROM recipes
+            LEFT JOIN chefs ON (recipes.chef_id = chefs.id)
+            ${filterQuery}
+            LIMIT $1 OFFSET $2
+        `
+        
+        return db.query(query, [limit, offset])
     }
 }
